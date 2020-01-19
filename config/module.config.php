@@ -3,8 +3,7 @@ namespace FileSideload;
 
 return [
     'service_manager' => [
-        // Override the default local store in order to hard-link files if possible, else copy them as usual.
-        'Omeka\File\Store\Local' => Service\File\Store\LocalFactory::class,
+        File\Store\LocalHardLink::class => Service\File\Store\LocalHardLinkFactory::class,
     ],
     'media_ingesters' => [
         'factories' => [
