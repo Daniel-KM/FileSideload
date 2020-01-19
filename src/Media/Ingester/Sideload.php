@@ -7,6 +7,7 @@ use Omeka\File\TempFileFactory;
 use Omeka\File\Validator;
 use Omeka\Media\Ingester\IngesterInterface;
 use Omeka\Stdlib\ErrorStore;
+use Omeka\Stdlib\Message;
 use Zend\Form\Element\Select;
 use Zend\View\Renderer\PhpRenderer;
 
@@ -23,6 +24,16 @@ class Sideload implements IngesterInterface
     protected $deleteFile;
 
     /**
+     * @var bool
+     */
+    protected $modeHardlink;
+
+    /**
+     * @var bool
+     */
+    protected $modeCopy;
+
+    /**
      * @var TempFileFactory
      */
     protected $tempFileFactory;
@@ -35,14 +46,17 @@ class Sideload implements IngesterInterface
     /**
      * @param string $directory
      * @param bool $deleteFile
+     * @param string $mode
      * @param TempFileFactory $tempFileFactory
      * @param Validator $validator
      */
-    public function __construct($directory, $deleteFile, TempFileFactory $tempFileFactory, Validator $validator)
+    public function __construct($directory, $deleteFile, $mode, TempFileFactory $tempFileFactory, Validator $validator)
     {
         // Only work on the resolved real directory path.
         $this->directory = realpath($directory);
         $this->deleteFile = $deleteFile;
+        $this->modeHardlink = $mode === 'hardlink_copy' || $mode === 'hardlink';
+        $this->modeCopy = $mode === 'hardlink_copy' || $mode === 'copy';
         $this->tempFileFactory = $tempFileFactory;
         $this->validator = $validator;
     }
@@ -93,7 +107,25 @@ class Sideload implements IngesterInterface
         $tempFile->setSourceName($data['ingest_filename']);
 
         // Copy the file to a temp path, so it is managed as a real temp file (#14).
-        copy($realPath, $tempFile->getTempPath());
+        $tempPath = $tempFile->getTempPath();
+        if ($this->modeHardlink) {
+            $result = @link($realPath, $tempPath);
+            if (!$result) {
+                if (!$this->modeCopy) {
+                    if ($errorStore) {
+                        $message = new Message(
+                            'Error when hard-linking source "%s". Check if it can be hard-linked to the Omeka directory of original files.', // @translate
+                            $tempFile->getSourceName(),
+                        );
+                        $errorStore->addError('file', $message);
+                    }
+                    return;
+                }
+                copy($realPath, $tempPath);
+            }
+        } else {
+            copy($realPath, $tempPath);
+        }
 
         if (!$this->validator->validate($tempFile, $errorStore)) {
             return;
