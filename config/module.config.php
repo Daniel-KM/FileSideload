@@ -3,7 +3,9 @@ namespace FileSideload;
 
 return [
     'service_manager' => [
-        File\Store\LocalHardLink::class => Service\File\Store\LocalHardLinkFactory::class,
+        'factories' => [
+            File\Store\LocalHardLink::class => Service\File\Store\LocalHardLinkFactory::class,
+        ],
     ],
     'media_ingesters' => [
         'factories' => [
