@@ -53,7 +53,7 @@ class Sideload implements IngesterInterface
     public function __construct($directory, $deleteFile, $mode, TempFileFactory $tempFileFactory, Validator $validator)
     {
         // Only work on the resolved real directory path.
-        $this->directory = realpath($directory);
+        $this->directory = $directory ? realpath($directory) : '';
         $this->deleteFile = $deleteFile;
         $this->modeHardlink = $mode === 'hardlink_copy' || $mode === 'hardlink';
         $this->modeCopy = $mode === 'hardlink_copy' || $mode === 'copy';
